@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"  // 開発用にSQLiteを使用
+  url      = env("DATABASE_URL")
+}
+
+// ユーザーモデル
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Instagram 認証情報
+  instagramAccounts InstagramAccount[]
+  // スケジュールされた投稿
+  posts            Post[]
+}
+
+// Instagramアカウント情報
+model InstagramAccount {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Instagram APIの認証情報
+  accessToken  String?
+  username     String
+  profilePicture String?
+  isConnected  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // このアカウントに関連する投稿
+  posts        Post[]
+}
+
+// 投稿モデル
+model Post {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instagramAccountId String
+  instagramAccount  InstagramAccount @relation(fields: [instagramAccountId], references: [id], onDelete: Cascade)
+
+  // 投稿内容
+  caption           String
+  mediaUrls         String   // JSON形式で複数の画像URLを保存
+  
+  // スケジュール情報
+  scheduledAt       DateTime
+  publishedAt       DateTime?
+  status            PostStatus @default(SCHEDULED)
+  
+  // メタデータ
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// 投稿ステータス
+enum PostStatus {
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
